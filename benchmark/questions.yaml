@@ -1,0 +1,58 @@
+# Grounding benchmark: natural-language questions paired with reference ("gold")
+# SQL. The runner executes both the model's SQL and the gold SQL and compares
+# result sets (execution accuracy) -- the standard text-to-SQL eval metric.
+- id: q1
+  question: What was total spend in 2024?
+  gold_sql: >
+    SELECT SUM(f.total_cost)
+    FROM fact_purchase_orders f JOIN dim_date d ON f.date_key = d.date_key
+    WHERE d.year = 2024
+
+- id: q2
+  question: Which supplier had the highest total spend overall?
+  gold_sql: >
+    SELECT s.supplier_name, SUM(f.total_cost) AS total_spend
+    FROM fact_purchase_orders f JOIN dim_supplier s ON f.supplier_key = s.supplier_key
+    GROUP BY s.supplier_name ORDER BY total_spend DESC LIMIT 1
+
+- id: q3
+  question: What is the on-time delivery rate by region?
+  gold_sql: >
+    SELECT w.region, ROUND(AVG(f.on_time_flag) * 100, 1) AS on_time_rate
+    FROM fact_purchase_orders f JOIN dim_warehouse w ON f.warehouse_key = w.warehouse_key
+    GROUP BY w.region ORDER BY w.region
+
+- id: q4
+  question: Show average lead time by supplier tier.
+  gold_sql: >
+    SELECT s.tier, ROUND(AVG(f.lead_time_days), 1) AS avg_lead_time
+    FROM fact_purchase_orders f JOIN dim_supplier s ON f.supplier_key = s.supplier_key
+    GROUP BY s.tier ORDER BY s.tier
+
+- id: q5
+  question: Which product category has the highest defect rate?
+  gold_sql: >
+    SELECT p.category, ROUND(SUM(f.defect_qty) * 100.0 / SUM(f.order_qty), 2) AS defect_rate
+    FROM fact_purchase_orders f JOIN dim_product p ON f.product_key = p.product_key
+    GROUP BY p.category ORDER BY defect_rate DESC LIMIT 1
+
+- id: q6
+  question: Total spend by quarter in 2025.
+  gold_sql: >
+    SELECT d.quarter, SUM(f.total_cost) AS total_spend
+    FROM fact_purchase_orders f JOIN dim_date d ON f.date_key = d.date_key
+    WHERE d.year = 2025 GROUP BY d.quarter ORDER BY d.quarter
+
+- id: q7
+  question: How many purchase orders came from high-risk suppliers?
+  gold_sql: >
+    SELECT COUNT(DISTINCT f.po_id)
+    FROM fact_purchase_orders f JOIN dim_supplier s ON f.supplier_key = s.supplier_key
+    WHERE s.risk_rating = 'High'
+
+- id: q8
+  question: What is the average lead time for suppliers in China?
+  gold_sql: >
+    SELECT ROUND(AVG(f.lead_time_days), 1)
+    FROM fact_purchase_orders f JOIN dim_supplier s ON f.supplier_key = s.supplier_key
+    WHERE s.country = 'China'

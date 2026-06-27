@@ -1,0 +1,89 @@
+# GenBI-Lab Semantic Layer
+# This file is the "certified data asset" that grounds the LLM. Every metric here
+# has ONE agreed definition, so "spend" or "on-time rate" mean the same thing in
+# every answer. The text-to-SQL engine is told to use these definitions verbatim.
+
+domain: Procurement & Supply Chain
+warehouse: data/warehouse.db
+grain: One row per purchase-order line in fact_purchase_orders.
+
+tables:
+  fact_purchase_orders:
+    type: fact
+    description: Purchase-order lines. Central fact joined to all dimensions by *_key.
+    certified: true
+    columns:
+      po_id: Surrogate key, one per PO line.
+      date_key: FK to dim_date.
+      supplier_key: FK to dim_supplier.
+      product_key: FK to dim_product.
+      warehouse_key: FK to dim_warehouse.
+      order_qty: Units ordered on the line.
+      unit_cost: Cost per unit in USD.
+      total_cost: order_qty * unit_cost, in USD. Use this for spend.
+      lead_time_days: Days from order to receipt.
+      on_time_flag: 1 if delivered on time, else 0.
+      defect_qty: Units received defective.
+
+  dim_supplier:
+    type: dimension
+    description: Suppliers and their risk profile.
+    columns:
+      supplier_key: PK.
+      supplier_name: Supplier display name.
+      country: Supplier country.
+      tier: Strategic tier (Tier 1/2/3).
+      risk_rating: Low / Medium / High.
+
+  dim_product:
+    type: dimension
+    columns:
+      product_key: PK.
+      product_name: Product display name.
+      category: Top-level category.
+      subcategory: Finer grouping.
+
+  dim_warehouse:
+    type: dimension
+    columns:
+      warehouse_key: PK.
+      warehouse_name: Receiving facility name.
+      region: Geographic region.
+
+  dim_date:
+    type: dimension
+    columns:
+      date_key: PK in YYYYMMDD form.
+      full_date: ISO date.
+      month: Month number 1-12.
+      quarter: Quarter 1-4.
+      year: Calendar year.
+
+# Certified metrics. The engine must compute these EXACTLY as written.
+metrics:
+  total_spend:
+    expression: SUM(total_cost)
+    description: Total procurement spend in USD.
+    format: currency
+  order_count:
+    expression: COUNT(DISTINCT po_id)
+    description: Number of distinct purchase-order lines.
+  on_time_delivery_rate:
+    expression: ROUND(AVG(on_time_flag) * 100, 1)
+    description: Percent of PO lines delivered on time.
+    format: percent
+  avg_lead_time:
+    expression: ROUND(AVG(lead_time_days), 1)
+    description: Average days from order to receipt.
+  defect_rate:
+    expression: ROUND(SUM(defect_qty) * 100.0 / SUM(order_qty), 2)
+    description: Defective units as a percent of units ordered.
+    format: percent
+
+# Governance metadata surfaced to reviewers and access tooling.
+governance:
+  owner: data-platform@company.example
+  classification: Internal
+  pii_columns: []          # no PII in this gold model
+  certified_by: Analytics Engineering
+  last_reviewed: 2026-06-01

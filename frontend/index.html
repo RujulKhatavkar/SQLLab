@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GenBI-Lab · governed conversational analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0D1117; --panel:#161B22; --panel2:#0F141A; --border:#283039;
+    --text:#E6EDF3; --muted:#8B949E; --trust:#2DD4BF; --trust-dim:#1c8e80;
+    --warn:#E3826A;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--trust)}
+  .wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  /* left rail */
+  aside{background:var(--panel2);border-right:1px solid var(--border);padding:22px 18px;
+    position:sticky;top:0;height:100vh;overflow:auto}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;
+    font-size:18px;margin-bottom:2px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--trust);
+    box-shadow:0 0 10px var(--trust)}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:22px}
+  .rail-h{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+    margin:20px 0 8px}
+  .tbl{font-family:var(--mono);font-size:12.5px;margin-bottom:10px}
+  .tbl b{color:var(--text);font-weight:600}
+  .tbl span{color:var(--muted)}
+  .metric{font-family:var(--mono);font-size:12px;color:var(--text);
+    padding:4px 0;border-bottom:1px dashed var(--border)}
+  .metric em{color:var(--trust-dim);font-style:normal}
+  /* main console */
+  main{padding:40px clamp(20px,5vw,64px);max-width:960px}
+  h1{font-size:26px;letter-spacing:-.025em;margin:0 0 6px;font-weight:700}
+  .lead{color:var(--muted);margin:0 0 26px;max-width:60ch}
+  /* KPI cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:12px;margin-bottom:32px}
+  .kpi-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px}
+  .kpi-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:4px}
+  .kpi-value{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--trust)}
+  .kpi-name{font-size:12px;color:var(--muted);margin-top:3px}
+  /* ask bar */
+  .ask{display:flex;gap:10px;margin-bottom:14px}
+  .ask input{flex:1;background:var(--panel);border:1px solid var(--border);
+    color:var(--text);border-radius:9px;padding:13px 15px;font-size:15px;font-family:var(--sans)}
+  .ask input:focus{outline:none;border-color:var(--trust);box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+  .ask button{background:var(--trust);color:#06231f;border:0;border-radius:9px;
+    padding:0 20px;font-weight:650;font-size:14px;cursor:pointer}
+  .ask button:disabled{opacity:.5;cursor:default}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:30px}
+  .chip{background:var(--panel);border:1px solid var(--border);color:var(--muted);
+    border-radius:20px;padding:6px 13px;font-size:13px;cursor:pointer}
+  .chip:hover{border-color:var(--trust);color:var(--text)}
+  /* result cards */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;margin-bottom:18px}
+  .q{padding:14px 18px;border-bottom:1px solid var(--border);color:var(--muted);font-size:14px}
+  .q b{color:var(--text);font-weight:600}
+  .badges{display:flex;flex-wrap:wrap;gap:7px;padding:12px 18px 0}
+  .badge{font-family:var(--mono);font-size:11.5px;color:var(--trust);
+    border:1px solid var(--trust-dim);border-radius:5px;padding:2px 8px}
+  .chart-wrap{padding:16px 18px;border-bottom:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+  th,td{text-align:left;padding:9px 18px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:500;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  td{color:var(--text)}
+  tr:last-child td{border-bottom:0}
+  details{border-top:1px solid var(--border)}
+  summary{cursor:pointer;padding:11px 18px;font-size:12px;color:var(--muted);
+    letter-spacing:.04em;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"› ";color:var(--trust)}
+  details[open] summary::before{content:"⌄ "}
+  pre{margin:0;padding:0 18px 16px;font-family:var(--mono);font-size:12.5px;
+    color:#cbd5e1;white-space:pre-wrap;line-height:1.6}
+  .err{color:var(--warn);padding:14px 18px;font-family:var(--mono);font-size:13px}
+  .muted{color:var(--muted);font-size:13px}
+  @media(max-width:760px){.wrap{grid-template-columns:1fr}aside{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="brand"><span class="dot"></span>GenBI-Lab</div>
+    <div class="sub">governed conversational analytics</div>
+    <div class="rail-h">Semantic layer</div>
+    <div id="schema" class="muted">loading…</div>
+    <div class="rail-h">Certified metrics</div>
+    <div id="metrics" class="muted">loading…</div>
+  </aside>
+
+  <main>
+    <h1>Ask the warehouse.</h1>
+    <p class="lead">Natural-language questions are translated to SQL, grounded on a
+      certified semantic layer, and run against a read-only gold model. Every answer
+      shows the SQL it ran and the certified metrics it used — so the result is
+      explainable, not a black box.</p>
+
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div class="ask">
+      <input id="q" placeholder="e.g. on-time delivery rate by region"
+        autocomplete="off" />
+      <button id="run">Run</button>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div id="out"></div>
+  </main>
+</div>
+
+<script>
+const EXAMPLES = [
+  "What was total spend in 2024?",
+  "Which supplier had the highest total spend?",
+  "On-time delivery rate by region",
+  "Average lead time by supplier tier",
+  "Which product category has the highest defect rate?",
+  "Total spend by quarter in 2025",
+];
+const out = document.getElementById("out");
+const input = document.getElementById("q");
+let chartSeq = 0;
+
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+const KPI_META = {
+  total_spend:            {label:"Total Spend",        fmt: v=>"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0})},
+  order_count:            {label:"PO Lines",            fmt: v=>Number(v).toLocaleString()},
+  on_time_delivery_rate:  {label:"On-Time Delivery",   fmt: v=>v+"%"},
+  avg_lead_time:          {label:"Avg Lead Time",      fmt: v=>v+" days"},
+  defect_rate:            {label:"Defect Rate",         fmt: v=>v+"%"},
+};
+
+// ── Semantic layer sidebar + KPI cards ───────────────────────────────────────
+fetch("/semantic").then(r=>r.json()).then(s=>{
+  document.getElementById("schema").innerHTML = Object.entries(s.tables)
+    .map(([t,cols])=>`<div class="tbl"><b>${t}</b><br><span>${cols.join(", ")}</span></div>`).join("");
+  document.getElementById("metrics").innerHTML = Object.entries(s.metrics)
+    .map(([m,e])=>`<div class="metric">${m}<br><em>${esc(e)}</em></div>`).join("");
+
+  if(s.kpis){
+    const grid = document.getElementById("kpi-grid");
+    grid.innerHTML = Object.entries(s.kpis).map(([name, val])=>{
+      const meta = KPI_META[name] || {label: name, fmt: v=>String(v)};
+      const display = (val !== null && val !== undefined) ? meta.fmt(val) : "—";
+      return `<div class="kpi-card">
+        <div class="kpi-label">Live KPI</div>
+        <div class="kpi-value">${esc(display)}</div>
+        <div class="kpi-name">${esc(meta.label)}</div>
+      </div>`;
+    }).join("");
+  }
+}).catch(()=>{});
+
+// ── Example chips ────────────────────────────────────────────────────────────
+EXAMPLES.forEach(e=>{
+  const c=document.createElement("button"); c.className="chip"; c.textContent=e;
+  c.onclick=()=>{ input.value=e; ask(); };
+  document.getElementById("chips").appendChild(c);
+});
+
+// ── Chart helpers ────────────────────────────────────────────────────────────
+const DATE_KWS = ["date","quarter","month","year","full_date"];
+const CHART_COLORS = ["#2DD4BF","#818CF8","#FB923C","#34D399","#F472B6","#FACC15"];
+
+function findDateCol(columns){ return columns.findIndex(c=>DATE_KWS.some(k=>c.toLowerCase().includes(k))); }
+function isNumeric(vals){ return vals.every(v=>v===null||typeof v==="number"); }
+
+function renderChart(canvasId, hint, columns, rows){
+  const ctx = document.getElementById(canvasId);
+  if(!ctx || !rows.length) return;
+
+  Chart.defaults.color = "#8B949E";
+  Chart.defaults.borderColor = "#283039";
+
+  if(hint === "timeseries"){
+    const dateIdx = findDateCol(columns);
+    if(dateIdx === -1) return;
+    const numIdxs = columns.map((_,i)=>i).filter(i=>i!==dateIdx && isNumeric(rows.map(r=>r[i])));
+    if(!numIdxs.length) return;
+    const labels = rows.map(r=>String(r[dateIdx]));
+    const datasets = numIdxs.map((ni,di)=>({
+      label: columns[ni],
+      data: rows.map(r=>r[ni]),
+      borderColor: CHART_COLORS[di % CHART_COLORS.length],
+      backgroundColor: CHART_COLORS[di % CHART_COLORS.length]+"33",
+      tension: 0.3, fill: true, pointRadius: 3,
+    }));
+    new Chart(ctx,{type:"line",data:{labels,datasets},options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:datasets.length>1}},
+      scales:{x:{grid:{color:"#283039"}},y:{grid:{color:"#283039"}}},
+    }});
+
+  } else if(hint === "bar"){
+    const catIdx = columns.findIndex((_,i)=>!isNumeric(rows.map(r=>r[i])));
+    const numIdxs = columns.map((_,i)=>i).filter(i=>i!==catIdx && isNumeric(rows.map(r=>r[i])));
+    if(catIdx === -1 || !numIdxs.length) return;
+    const labels = rows.map(r=>String(r[catIdx]));
+    const datasets = numIdxs.map((ni,di)=>({
+      label: columns[ni],
+      data: rows.map(r=>r[ni]),
+      backgroundColor: CHART_COLORS[di % CHART_COLORS.length]+"BB",
+      borderColor: CHART_COLORS[di % CHART_COLORS.length],
+      borderWidth: 1, borderRadius: 4,
+    }));
+    new Chart(ctx,{type:"bar",data:{labels,datasets},options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:datasets.length>1}},
+      scales:{x:{grid:{color:"#283039"}},y:{grid:{color:"#283039"},beginAtZero:true}},
+    }});
+  }
+}
+
+// ── Result card builder ──────────────────────────────────────────────────────
+function card(d, question){
+  let body = "";
+  if(d.error && !d.sql){ body=`<div class="err">${esc(d.error)}</div>`; }
+  else {
+    if(d.metrics_used && d.metrics_used.length){
+      body += `<div class="badges">`+d.metrics_used
+        .map(m=>`<span class="badge">grounded on · ${esc(m)}</span>`).join("")+`</div>`;
+    }
+    const hint = d.chart_hint || "table";
+    const cid = `chart-${++chartSeq}`;
+    if((hint==="timeseries"||hint==="bar") && d.columns && d.rows && d.rows.length){
+      body += `<div class="chart-wrap"><canvas id="${cid}" height="220"></canvas></div>`;
+    }
+    if(d.columns){
+      body += `<table><thead><tr>`+d.columns.map(c=>`<th>${esc(c)}</th>`).join("")
+        +`</tr></thead><tbody>`+ d.rows.slice(0,50).map(r=>`<tr>`+
+        r.map(v=>`<td>${esc(v)}</td>`).join("")+`</tr>`).join("") +`</tbody></table>`;
+      if(d.rows.length>50) body+=`<div class="muted" style="padding:8px 18px">showing 50 of ${d.rows.length} rows</div>`;
+    }
+    if(d.error){ body+=`<div class="err">${esc(d.error)}</div>`; }
+    if(d.sql){ body+=`<details><summary>generated SQL</summary><pre>${esc(d.sql)}</pre></details>`; }
+    // attach chart after DOM insertion
+    if((hint==="timeseries"||hint==="bar") && d.columns && d.rows){
+      setTimeout(()=>renderChart(cid, hint, d.columns, d.rows), 0);
+    }
+  }
+  return `<div class="card"><div class="q">Q&nbsp; <b>${esc(question)}</b></div>${body}</div>`;
+}
+
+// ── Ask flow ─────────────────────────────────────────────────────────────────
+async function ask(){
+  const question = input.value.trim();
+  if(!question) return;
+  const btn = document.getElementById("run"); btn.disabled=true; btn.textContent="…";
+  out.insertAdjacentHTML("afterbegin",
+    `<div class="card" id="pending"><div class="q">Q&nbsp; <b>${esc(question)}</b></div>`+
+    `<div class="muted" style="padding:14px 18px">grounding &amp; generating SQL…</div></div>`);
+  try{
+    const res = await fetch("/ask",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question})});
+    const d = await res.json();
+    document.getElementById("pending").outerHTML = card(d, question);
+  }catch(e){
+    document.getElementById("pending").outerHTML = card({error:String(e)}, question);
+  }finally{ btn.disabled=false; btn.textContent="Run"; input.value=""; }
+}
+document.getElementById("run").onclick = ask;
+input.addEventListener("keydown", e=>{ if(e.key==="Enter") ask(); });
+</script>
+</body>
+</html>
