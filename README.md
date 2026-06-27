@@ -1,4 +1,4 @@
-![Uploading image.png…]()
+<img width="2940" height="1594" alt="image" src="https://github.com/user-attachments/assets/66a136b9-21b5-4f4a-8ecf-5b4e6ad52e7e" />
 ---
 title: GenBI-Lab
 emoji: 📊
