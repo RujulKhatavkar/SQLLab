@@ -1,3 +1,12 @@
+---
+title: GenBI-Lab
+emoji: 📊
+colorFrom: teal
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # GenBI-Lab
 
 **Governed conversational analytics.** Ask a procurement/supply-chain warehouse a
